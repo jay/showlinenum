@@ -52,33 +52,18 @@ function strip_ansi_color_codes( input )
         next;
     }
 
-    if( parsing_diff_header )
-    {
-        stripped = strip_ansi_color_codes( $0 );
-        #print "before: " $0;
-        #print "after : " stripped;
-
-        # Check for path
-        regex = "^\\+\\+\\+ b\\/(.*)";
-        if( stripped ~ regex )
-        {
-            path = gensub( regex, "\\1", "", stripped );
-            found_path = 1;
-            #print "found path: " path;
-        }
-
-        next;
-    }
-
-    print "marker";
-    exit;
-
     # check for diff line info
     if( $0 ~ /^(\033\[[0-9;]*m)*@@ / )
     {
         line = 0;
         found_line = 0;
         parsing_diff_header = 0;
+
+        if( !found_path )
+        {
+            print "FATAL: Failed to parse diff: Line info found before path info.";
+            exit 1;
+        }
 
         stripped = strip_ansi_color_codes( $0 );
 
@@ -98,6 +83,25 @@ function strip_ansi_color_codes( input )
         }
 
         found_line = 1;
+        print path ":" $0;
+        next;
+    }
+
+    if( parsing_diff_header )
+    {
+        stripped = strip_ansi_color_codes( $0 );
+        #print "before: " $0;
+        #print "after : " stripped;
+
+        # Check for path
+        regex = "^\\+\\+\\+ b\\/(.*)";
+        if( stripped ~ regex )
+        {
+            path = gensub( regex, "\\1", "", stripped );
+            found_path = 1;
+            #print "found path: " path;
+        }
+
         next;
     }
 
