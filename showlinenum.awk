@@ -101,10 +101,20 @@ function strip_ansi_color_codes( input )
         #print "after : " stripped;
 
         # Check for path
-        regex = "^\\+\\+\\+ b\\/(.*)";
+        regex = "^\\+\\+\\+ b\\/(.+)";
         if( stripped ~ regex )
         {
             path = gensub( regex, "\\1", "", stripped );
+
+            # Exit if there's a colon in the path. This is to keep parsing sane.
+            if( path ~ /:/ )
+            {
+                # Parse timestamps instead? I can't find that git diff outputs them.
+                print "FATAL: Failed to parse diff: Colons in path are forbidden.";
+                print;
+                exit 1;
+            }
+
             found_path = 1;
             #print "found path: " path;
         }
