@@ -52,6 +52,13 @@ function strip_ansi_color_codes( input )
         next;
     }
 
+    # check for combined diff line info
+    if( $0 ~ /^(\033\[[0-9;]*m)*@@@ / )
+    {
+        print "FATAL: Failed to parse diff: Combined diff format not supported.";
+        exit 1;
+    }
+
     # check for diff line info
     if( $0 ~ /^(\033\[[0-9;]*m)*@@ / )
     {
