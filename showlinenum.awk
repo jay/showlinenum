@@ -90,7 +90,7 @@ function strip_ansi_color_codes( input )
         }
 
         found_line = 1;
-        print path ":" $0;
+        print path "::" $0;
         next;
     }
 
