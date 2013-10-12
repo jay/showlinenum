@@ -21,16 +21,103 @@
 #
 #
 #
-# This gawk script changes the output of git diff to include the path and line number for each line.
+# This gawk script changes the output of git diff to prepend the line number for each line.
 #
+#
+#### Usage:
+#
+# git diff [options] <required> | showlinenum.awk [option=<value>]
+#
+####
+#
+#### Examples:
+#
+# Simple example. Line numbers are prepended to git diff's output.
+# git diff --cached | showlinenum.awk
+#
+# This script properly handles the ANSI escape color codes output by git diff. To get color output
+# you have to force git diff to send it by passing --color=always. When that option is used the
+# color output is always output so it is not recommended unless you are either outputting to the
+# terminal or somewhere that can properly handle the color codes. Many scripts do not function
+# correctly when working with color coded input.
+#
+# This is the same as the first example, but with color output.
+# git diff --color=always --cached | showlinenum.awk
+#
+# Options can be passed to this script by using awk's -v option or the traditional way (shown).
+# git diff --color=always HEAD~1 HEAD | showlinenum.awk show_header=0
+# git diff --color=always HEAD~1 HEAD | showlinenum.awk show_path=1 show_hunk=0
+#
+#
+####
+#
+#
+#### Options:
+#
+# @show_header [0,1] default: 1
+# Show diff headers.
+#
+# Example:
+# diff --git a/abc.c b/abc.c
+# index 285065f..2471f87 100644
+# --- a/abc.c
+# +++ b/abc.c
+#
+##
+#
+# @show_hunk [0,1] default: ( show_header ? 1 : 0 )
+# Show line hunks.
+#
+# Example: @@ -0,0 +1,17 @@
+#
+##
+#
+# @show_path [0,1] default: ( show_header ? 0 : 1 )
+# Show paths before line numbers.
+#
+# Example:
+# testdir/file:39:+some added text
+#
+####
 #
 
-BEGIN {
+
+function init()
+{
     parsing_diff_header = 0;
     found_path = 0;
     path = 0;
     found_line = 0;
     line = 0;
+
+    # To determine whether or not a variable was defined on the command line and is not an empty
+    # string it must be tested. Many versions of gawk will show a warning if using option --lint and
+    # an undefined variable is evaluated. Therefore this workaround to force define some variables
+    # as a string by appending an empty string. The variables are later converted back to a number
+    # by get_bool().
+    show_header = show_header "";
+    show_hunk = show_hunk "";
+    show_path = show_path "";
+
+    # Return the variable as a bool value unless it is empty then return its default bool value.
+    show_header = get_bool( show_header, 1 );
+    show_hunk = get_bool( show_hunk, ( show_header ? 1 : 0 ) );
+    show_path = get_bool( show_path, ( show_header ? 0 : 1 ) );
+}
+
+# this returns the bool numeric value of 'input' if it contains a numeric or string bool value,
+# otherwise it returns the numeric value of default_value.
+function get_bool( input, default_value )
+{
+    if( default_value !~ /^[0-1]$/ )
+    {
+        print "FATAL: get_bool(): default_value must be a bool value.";
+        print "default_value: " default_value;
+        exit;
+    }
+
+    regex = "^[[:blank:]]*([0-1])[[:blank:]]*$";
+    return ( ( input ~ regex ) ? gensub( regex, "\\1", "", input ) : default_value ) + 0;
 }
 
 # this returns a string with the ansi color codes removed
@@ -41,6 +128,11 @@ function strip_ansi_color_codes( input )
 
 # main
 {
+    if( NR == 1 )
+    {
+        init();
+    }
+
     if( $0 ~ /^(\033\[[0-9;]*m)*diff / )
     {
         parsing_diff_header = 1;
@@ -48,7 +140,12 @@ function strip_ansi_color_codes( input )
         path = 0;
         found_line = 0;
         line = 0;
-        print "found diff header: " $0;
+
+        if( show_header )
+        {
+            print;
+        }
+
         next;
     }
 
@@ -90,7 +187,12 @@ function strip_ansi_color_codes( input )
         }
 
         found_line = 1;
-        print path "::" $0;
+
+        if( show_hunk )
+        {
+            print;
+        }
+
         next;
     }
 
@@ -119,6 +221,11 @@ function strip_ansi_color_codes( input )
             #print "found path: " path;
         }
 
+        if( show_header )
+        {
+            print;
+        }
+
         next;
     }
 
@@ -134,7 +241,7 @@ function strip_ansi_color_codes( input )
         exit 1;
     }
 
-    print path ":" line ":" $0;
+    print ( show_path ? path : "" ) ":" line ":" $0;
 
     if( $0 ~ /^(\033\[[0-9;]*m)*[ +]/ )
     {
