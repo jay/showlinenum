@@ -241,7 +241,18 @@ function strip_ansi_color_codes( input )
         exit 1;
     }
 
-    print ( show_path ? path : "" ) ":" line ":" $0;
+    if( show_path )
+    {
+        printf "%s:", path;
+    }
+
+    # Awk stores all integers internally as floating point. If print is passed an integer it is
+    # allowed convert it to scientific notation which I don't want for line numbers. I'm not sure
+    # how relevant this is since it seems to vary between different versions of awk and only when
+    # the integer is large.
+    # In any case using the 'f' type specifier should show [-9007199254740992,9007199254740992]
+    printf "%.0f:", line;
+    print;
 
     if( $0 ~ /^(\033\[[0-9;]*m)*[ +]/ )
     {
