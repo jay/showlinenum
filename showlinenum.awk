@@ -28,6 +28,17 @@
 #
 # git diff [options] <required> | showlinenum.awk [option=<value>]
 #
+# The diff line output is in this format:
+# [path:]<line number:><diff line>
+#
+# On error a line that starts with ERROR: and is followed by script name and error message(s)
+# --which may be one or more lines-- is sent to standard error output (stderr). The script then
+# continues to the next line. This is unimplemented for now. All errors are treated as fatal errors.
+#
+# On fatal error a line that starts with FATAL: and is followed by script name and error message(s)
+# --which may be one or more lines-- is sent to standard error output (stderr). The script then
+# aborts with exit code 1.
+#
 ####
 #
 #### Examples:
@@ -116,15 +127,23 @@ function init()
     allow_colons_in_path = get_bool( allow_colons_in_path, 0 );
 }
 
+function FATAL( error_message )
+{
+    # Apparently there is no portable way to get this script's name at runtime?
+    error_message = "FATAL: showlinenum: " error_message;
+    print error_message > "/dev/stderr";
+    exit 1;
+}
+
 # this returns the bool numeric value of 'input' if it contains a numeric or string bool value,
 # otherwise it returns the numeric value of default_value.
 function get_bool( input, default_value )
 {
     if( default_value !~ /^[0-1]$/ )
     {
-        print "FATAL: get_bool(): default_value must be a bool value.";
-        print "default_value: " default_value;
-        exit;
+        errmsg = "get_bool(): default_value must be a bool value.";
+        errmsg = errmsg "\n" "default_value: " default_value;
+        FATAL( errmsg );
     }
 
     regex = "^[[:blank:]]*([0-1])[[:blank:]]*$";
@@ -163,8 +182,7 @@ function strip_ansi_color_codes( input )
     # check for combined diff line info
     if( $0 ~ /^(\033\[[0-9;]*m)*@@@ / )
     {
-        print "FATAL: Failed to parse diff: Combined diff format not supported.";
-        exit 1;
+        FATAL( "Combined diff format not supported." );
     }
 
     # check for diff line info
@@ -176,8 +194,7 @@ function strip_ansi_color_codes( input )
 
         if( !found_path )
         {
-            print "FATAL: Failed to parse diff: Line info found before path info.";
-            exit 1;
+            FATAL( "Line info found before path info." );
         }
 
         stripped = strip_ansi_color_codes( $0 );
@@ -193,8 +210,7 @@ function strip_ansi_color_codes( input )
 
         if( !line )
         {
-            print "FATAL: Failed to parse diff line info: " $0;
-            exit 1;
+            FATAL( "Line number not found." "\n" $0 );
         }
 
         found_line = 1;
@@ -223,9 +239,9 @@ function strip_ansi_color_codes( input )
             if( !allow_colons_in_path && ( path ~ /:/ ) )
             {
                 # Parse timestamps instead? I can't find that git diff outputs them.
-                print "FATAL: Failed to parse diff: Colons in path are forbidden.";
-                print;
-                exit 1;
+                errmsg = "Colons in path are forbidden.";
+                errmsg = errmsg "\n" "To override use option allow_colons_in_path.";
+                FATAL( errmsg );
             }
 
             found_path = 1;
@@ -242,14 +258,12 @@ function strip_ansi_color_codes( input )
 
     if( !found_path )
     {
-        print "FATAL: Failed to parse diff: Path info not found.";
-        exit 1;
+        FATAL( "Path info not found." );
     }
 
     if( !found_line )
     {
-        print "FATAL: Failed to parse diff: Line info not found.";
-        exit 1;
+        FATAL( "Line info not found." );
     }
 
     if( show_path )
