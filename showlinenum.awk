@@ -78,6 +78,15 @@
 # Example:
 # testdir/file:39:+some added text
 #
+##
+#
+# @allow_colons_in_path [0,1] default: 0
+# Allow colons in path.
+#
+# By default this script will abort if it encounters a path that contains a colon. That's done to
+# guarantee that this script's diff line output can always be parsed with the first colon occurring
+# immediately after the full path, if the path is shown. Even if it's not shown it's still checked.
+#
 ####
 #
 
@@ -98,11 +107,13 @@ function init()
     show_header = show_header "";
     show_hunk = show_hunk "";
     show_path = show_path "";
+    allow_colons_in_path = allow_colons_in_path "";
 
     # Return the variable as a bool value unless it is empty then return its default bool value.
     show_header = get_bool( show_header, 1 );
     show_hunk = get_bool( show_hunk, ( show_header ? 1 : 0 ) );
     show_path = get_bool( show_path, ( show_header ? 0 : 1 ) );
+    allow_colons_in_path = get_bool( allow_colons_in_path, 0 );
 }
 
 # this returns the bool numeric value of 'input' if it contains a numeric or string bool value,
@@ -209,7 +220,7 @@ function strip_ansi_color_codes( input )
             path = gensub( regex, "\\1", "", stripped );
 
             # Exit if there's a colon in the path. This is to keep parsing sane.
-            if( path ~ /:/ )
+            if( !allow_colons_in_path && ( path ~ /:/ ) )
             {
                 # Parse timestamps instead? I can't find that git diff outputs them.
                 print "FATAL: Failed to parse diff: Colons in path are forbidden.";
