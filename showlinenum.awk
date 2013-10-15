@@ -271,16 +271,39 @@ function strip_ansi_color_codes( input )
         printf "%s:", path;
     }
 
-    # Awk stores all integers internally as floating point. If print is passed an integer it is
-    # allowed convert it to scientific notation which I don't want for line numbers. I'm not sure
-    # how relevant this is since it seems to vary between different versions of awk and only when
-    # the integer is large.
-    # In any case using the 'f' type specifier should show [-9007199254740992,9007199254740992]
-    printf "%.0f:", line;
-    print;
-
-    if( $0 ~ /^(\033\[[0-9;]*m)*[ +]/ )
+    # I'm using match() to get the location of the indicator character because if I were to use
+    # gensub() I'd have to strip the diff line of ansi color codes either before or after since it
+    # can embed the color codes in a match. I think it would be slower to strip every diff line if
+    # done before, or if done after it could lead to corruption if internally gensub() prepends or
+    # appends escape codes to the indicator that it finds in the diff line itself (ie actually part
+    # of the diff line, not the colorization added by git diff). Unfortunately early versions of
+    # gawk (like the one included with git for Windows) do not support an array parameter for
+    # match() so the indicator must be extracted on success by using substr().
+    if( ( $0 !~ /^(\033\[[0-9;]*m)*[ +-]/ ) || !match( $0, /[ +-]/ ) || ( RLENGTH != 1 ) )
     {
-        line++;
+        FATAL( "Failed to extract indicator from diff line." "\n" $0 );
     }
+
+    indicator = substr( $0, RSTART, RLENGTH );
+
+    if( ( indicator == "+" ) || ( indicator == " " ) )
+    {
+        # Awk stores all integers internally as floating point. If print is passed an integer it is
+        # allowed convert it to scientific notation which I don't want for line numbers. I'm not
+        # sure how relevant that is since it seems to vary between different versions of awk and
+        # only when the integer is large (how large?).
+        # Using the 'f' type specifier should show [-9007199254740992, 9007199254740992]
+        printf "%.0f:", line++;
+    }
+    else if( indicator == "-" )
+    {
+        # Pad for each digit in line + 1
+        printf "%" ( length( line + 1 ) + 1 ) "s", ":";
+    }
+    else
+    {
+        FATAL( "Diff line indicator not recognized." "\n" $0 );
+    }
+
+    print;
 }
