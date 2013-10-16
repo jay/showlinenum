@@ -199,7 +199,7 @@ function strip_ansi_color_codes( input )
 
         stripped = strip_ansi_color_codes( $0 );
 
-        regex = "^@@ -[0-9]+(,[0-9]+)? \\+([0-9]+)(,[0-9]+)? @@";
+        regex = "^@@ -[0-9]+(,[0-9]+)? \\+([0-9]+)(,[0-9]+)? @@.*$";
         if( stripped ~ regex )
         {
             line = gensub( regex, "\\2", "", stripped );
