@@ -254,7 +254,7 @@ function strip_ansi_color_codes( input )
         #print "after : " stripped;
 
         # Check for path
-        regex = "^\\+\\+\\+ b\\/(.+)";
+        regex = "^\\+\\+\\+ (\\042?b\\/.+)$";
         if( stripped ~ regex )
         {
             path = gensub( regex, "\\1", "", stripped );
@@ -268,7 +268,7 @@ function strip_ansi_color_codes( input )
                 FATAL( errmsg );
             }
 
-            found_path = 1;
+            found_path = sub( /b\//, "", path );
 
             if( show_header )
             {
