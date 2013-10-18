@@ -91,6 +91,21 @@
 #
 ##
 #
+# @show_binary [0,1] default: ( show_header ? 0 : 1 )
+# Show a binary file that differs in an empty format. [path:]<:>
+#
+# Binary files have no concept of lines, therefore there is no line number to show that a binary
+# file differs. If the headers are shown you can always see whether or not a binary file differs
+# because there will be a message "Binary files <old> and <new> differ". If the headers are not
+# shown however, that message is suppressed and a binary file that differs is signified by a colon
+# that ends the line, with no line number before it. That is what I refer to as an "empty format".
+#
+# Here are two examples of the empty format, one where the path is shown and one where it isn't:
+# testdir/binary_file::
+# :
+#
+##
+#
 # @allow_colons_in_path [0,1] default: 0
 # Allow colons in path.
 #
@@ -102,13 +117,20 @@
 #
 
 
-function init()
+function reset_header_variables()
 {
     parsing_diff_header = 0;
     found_path = 0;
     path = 0;
     found_line = 0;
     line = 0;
+    found_diff = 0;
+    diff = 0;
+}
+
+function init()
+{
+    reset_header_variables();
 
     # To determine whether or not a variable was defined on the command line and is not an empty
     # string it must be tested. Many versions of gawk will show a warning if using option --lint and
@@ -118,12 +140,14 @@ function init()
     show_header = show_header "";
     show_hunk = show_hunk "";
     show_path = show_path "";
+    show_binary = show_binary "";
     allow_colons_in_path = allow_colons_in_path "";
 
     # Return the variable as a bool value unless it is empty then return its default bool value.
     show_header = get_bool( show_header, 1 );
     show_hunk = get_bool( show_hunk, ( show_header ? 1 : 0 ) );
     show_path = get_bool( show_path, ( show_header ? 0 : 1 ) );
+    show_binary = get_bool( show_binary, ( show_header ? 0 : 1 ) );
     allow_colons_in_path = get_bool( allow_colons_in_path, 0 );
 }
 
@@ -165,11 +189,11 @@ function strip_ansi_color_codes( input )
 
     if( $0 ~ /^(\033\[[0-9;]*m)*diff / )
     {
+        reset_header_variables();
         parsing_diff_header = 1;
-        found_path = 0;
-        path = 0;
-        found_line = 0;
-        line = 0;
+
+        diff = strip_ansi_color_codes( $0 );
+        found_diff = 1;
 
         if( show_header )
         {
@@ -245,7 +269,66 @@ function strip_ansi_color_codes( input )
             }
 
             found_path = 1;
-            #print "found path: " path;
+
+            if( show_header )
+            {
+                print;
+            }
+
+            next;
+        }
+
+        regex = "^Binary files (.*) differ$";
+        if( stripped ~ regex )
+        {
+            path = gensub( regex, "\\1", "", stripped );
+
+            # This gets the path for a binary file by digging through the first line of the diff
+            # header ('diff') and the binary file notice line ('stripped') to find the longest
+            # rightmost match between the two.
+            while( match( path, /and \042?b\/.+$/ ) )
+            {
+                path_len = RLENGTH - 4;
+                path = substr( path, RSTART + 4, path_len );
+
+                diff_rstart = ( length( diff ) + 1 ) - path_len;
+                if( diff_rstart < 1 )
+                {
+                    continue;
+                }
+                path2 = substr( diff, diff_rstart, path_len );
+
+                if( path == path2 )
+                {
+                    found_path = sub( /b\//, "", path );
+                    break;
+                }
+            }
+
+            if( show_header )
+            {
+                print;
+            }
+
+            if( !found_path )
+            {
+                errmsg = "Path info for binary file not found in header lines.";
+                errmsg = errmsg "\n" diff "\n" stripped;
+                FATAL( errmsg );
+            }
+
+            if( show_binary )
+            {
+                if( show_path )
+                {
+                    printf "%s:", path;
+                }
+
+                print ":";
+            }
+
+            reset_header_variables();
+            next;
         }
 
         if( show_header )
