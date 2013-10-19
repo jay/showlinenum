@@ -380,8 +380,8 @@ function strip_ansi_color_codes( input )
     }
     else if( indicator == "-" )
     {
-        # Pad for each digit in line + 1
-        printf "%" ( length( line + 1 ) + 1 ) "s", ":";
+        padding = length( ( line + 1 ) "" ) + 1;
+        printf "%" padding "s", ":";
     }
     else
     {
