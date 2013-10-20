@@ -29,7 +29,10 @@
 # git diff [options] <required> | showlinenum.awk [option=<value>]
 #
 # The diff line output is in this format:
-# [path:]<line number:><diff line>
+# [path:]<line number>:<diff line>
+#
+# If a file has been removed a tilde is substituted for the line number:
+# [path:]~:<diff line>
 #
 # On error a line that starts with ERROR: and is followed by script name and error message(s)
 # --which may be one or more lines-- is sent to standard error output (stderr). The script then
@@ -92,17 +95,20 @@
 ##
 #
 # @show_binary [0,1] default: ( show_header ? 0 : 1 )
-# Show a binary file that differs in an empty format. [path:]<:>
+# Show a binary file that differs in an empty format. [path:][~]:
 #
-# Binary files have no concept of lines, therefore there is no line number to show that a binary
-# file differs. If the headers are shown you can always see whether or not a binary file differs
-# because there will be a message "Binary files <old> and <new> differ". If the headers are not
-# shown however, that message is suppressed and a binary file that differs is signified by a colon
-# that ends the line, with no line number before it. That is what I refer to as an "empty format".
+# Binary files have no concept of lines, therefore there is no line number or diff line to show
+# that a binary file differs. If the headers are shown you can always see whether or not a binary
+# file differs because there will be a message "Binary files <old> and <new> differ". If the headers
+# are not shown however, that message is suppressed and a binary file that differs has an "empty
+# format" with no information, except for a tilde that will be shown if the file was removed.
 #
 # Here are two examples of the empty format, one where the path is shown and one where it isn't:
 # testdir/binary_file::
 # :
+#
+# Here is an example of a removed binary file, path shown:
+# calc.exe:~:
 #
 ##
 #
@@ -122,6 +128,8 @@ function reset_header_variables()
     parsing_diff_header = 0;
     found_path = 0;
     path = 0;
+    found_oldfile_path = 0;
+    oldfile_path = 0;
     found_line = 0;
     line = 0;
     found_diff = 0;
@@ -217,7 +225,7 @@ function strip_ansi_color_codes( input )
         found_line = 0;
         parsing_diff_header = 0;
 
-        if( !found_path )
+        if( !found_path || !found_oldfile_path )
         {
             FATAL( "Line info found before path info." );
         }
@@ -228,17 +236,26 @@ function strip_ansi_color_codes( input )
         if( stripped ~ regex )
         {
             line = gensub( regex, "\\2", "", stripped );
-            line = line + 0;
             # Adding zero to line converts it from a string to an integer.
             # That only works when all color codes have been removed.
+            line = line + 0;
+            found_line = 1;
         }
 
-        if( !line )
+        if( !found_line )
         {
-            FATAL( "Line number not found." "\n" $0 );
+            errmsg = "Unrecognized hunk info.";
+            if( path == "/dev/null" )
+            {
+                errmsg = errmsg "\n" "Removed file: " oldfile_path;
+            }
+            else
+            {
+                errmsg = errmsg "\n" "File: " path;
+            }
+            errmsg = errmsg "\n" "File's hunk info: " stripped;
+            FATAL( errmsg );
         }
-
-        found_line = 1;
 
         if( show_hunk )
         {
@@ -251,10 +268,60 @@ function strip_ansi_color_codes( input )
     if( parsing_diff_header )
     {
         stripped = strip_ansi_color_codes( $0 );
-        #print "before: " $0;
-        #print "after : " stripped;
 
-        # Check for path
+        if( stripped == "--- /dev/null" )
+        {
+            oldfile_path = "/dev/null";
+            found_oldfile_path = 1;
+
+            if( show_header )
+            {
+                print;
+            }
+
+            next;
+        }
+
+        if( stripped == "+++ /dev/null" )
+        {
+            path = "/dev/null";
+            found_path = 1;
+
+            if( show_header )
+            {
+                print;
+            }
+
+            next;
+        }
+
+        # Check for oldfile path
+        regex = "^\\-\\-\\- (\\042?a\\/.+)$";
+        if( stripped ~ regex )
+        {
+            oldfile_path = gensub( regex, "\\1", "", stripped );
+
+            # Exit if there's a colon in the path. This is to keep parsing sane.
+            if( !allow_colons_in_path && ( oldfile_path ~ /:/ ) )
+            {
+                # Parse timestamps instead? I can't find that git diff outputs them.
+                errmsg = "Colons in path are forbidden.";
+                errmsg = errmsg "\n" "To override use option allow_colons_in_path.";
+                errmsg = errmsg "\n" oldfile_path;
+                FATAL( errmsg );
+            }
+
+            found_oldfile_path = sub( /a\//, "", oldfile_path );
+
+            if( show_header )
+            {
+                print;
+            }
+
+            next;
+        }
+
+        # Check for newfile path
         regex = "^\\+\\+\\+ (\\042?b\\/.+)$";
         if( stripped ~ regex )
         {
@@ -266,6 +333,7 @@ function strip_ansi_color_codes( input )
                 # Parse timestamps instead? I can't find that git diff outputs them.
                 errmsg = "Colons in path are forbidden.";
                 errmsg = errmsg "\n" "To override use option allow_colons_in_path.";
+                errmsg = errmsg "\n" path;
                 FATAL( errmsg );
             }
 
@@ -279,15 +347,33 @@ function strip_ansi_color_codes( input )
             next;
         }
 
+        # Check for binary old/newfile path
         regex = "^Binary files (.*) differ$";
         if( stripped ~ regex )
         {
             path = gensub( regex, "\\1", "", stripped );
 
+            found_path = 0;
+            found_oldfile_path = 0;
+
+            # Check for binary oldfile path.
+            # The oldfile path only needs to be set if newfile is /dev/null (deleted or moved file).
+            if( match( path, / and \/dev\/null$/ ) )
+            {
+                oldfile_path = substr( path, 1, length( path ) - RLENGTH );
+
+                if( index( diff, oldfile_path ) && sub( /a\//, "", oldfile_path ) )
+                {
+                    found_oldfile_path = 1;
+                    path = "/dev/null";
+                    found_path = 1;
+                }
+            }
+
             # This gets the path for a binary file by digging through the first line of the diff
             # header ('diff') and the binary file notice line ('stripped') to find the longest
             # rightmost match between the two.
-            while( match( path, /and \042?b\/.+$/ ) )
+            while( !found_path && match( path, /and \042?b\/.+$/ ) )
             {
                 path_len = RLENGTH - 4;
                 path = substr( path, RSTART + 4, path_len );
@@ -311,7 +397,7 @@ function strip_ansi_color_codes( input )
                 print;
             }
 
-            if( !found_path )
+            if( !found_path && !found_oldfile_path )
             {
                 errmsg = "Path info for binary file not found in header lines.";
                 errmsg = errmsg "\n" diff "\n" stripped;
@@ -322,10 +408,10 @@ function strip_ansi_color_codes( input )
             {
                 if( show_path )
                 {
-                    printf "%s:", path;
+                    printf "%s:", ( found_oldfile_path ? oldfile_path : path );
                 }
 
-                print ":";
+                print ( found_oldfile_path ? "~:" : ":" );
             }
 
             reset_header_variables();
@@ -340,7 +426,7 @@ function strip_ansi_color_codes( input )
         next;
     }
 
-    if( !found_path )
+    if( !found_path || !found_oldfile_path )
     {
         FATAL( "Path info not found." );
     }
@@ -350,10 +436,26 @@ function strip_ansi_color_codes( input )
         FATAL( "Line info not found." );
     }
 
-    if( show_path )
+    if( path == "/dev/null" )
     {
-        printf "%s:", path;
+        if( $0 !~ /^(\033\[[0-9;]*m)*-/ )
+        {
+            errmsg = "Expected negative indicator for removed file's diff line.";
+            errmsg = errmsg "\n" "Removed file: " oldfile_path;
+            errmsg = errmsg "\n" "File's diff line: " $0;
+            FATAL( errmsg );
+        }
+
+        if( show_path )
+        {
+            printf "%s:", oldfile_path;
+        }
+
+        printf "~:";
+        print;
+        next;
     }
+
 
     # I'm using match() to get the location of the indicator character because if I were to use
     # gensub() I'd have to strip the diff line of ansi color codes either before or after since it
@@ -365,13 +467,21 @@ function strip_ansi_color_codes( input )
     # match() so the indicator must be extracted on success by using substr().
     if( ( $0 !~ /^(\033\[[0-9;]*m)*[ +-]/ ) || !match( $0, /[ +-]/ ) || ( RLENGTH != 1 ) )
     {
-        FATAL( "Failed to extract indicator from diff line." "\n" $0 );
+        errmsg = "Failed to extract indicator from diff line.";
+        errmsg = errmsg "\n" "File: " path;
+        errmsg = errmsg "\n" "File's diff line: " $0;
+        FATAL( errmsg );
     }
 
     indicator = substr( $0, RSTART, RLENGTH );
 
     if( ( indicator == "+" ) || ( indicator == " " ) )
     {
+        if( show_path )
+        {
+            printf "%s:", path;
+        }
+
         # Awk stores all integers internally as floating point. If print is passed an integer it is
         # allowed convert it to scientific notation which I don't want for line numbers. I'm not
         # sure how relevant that is since it seems to vary between different versions of awk and
@@ -381,12 +491,21 @@ function strip_ansi_color_codes( input )
     }
     else if( indicator == "-" )
     {
+        if( show_path )
+        {
+            printf "%s:", path;
+        }
+
         padding = length( ( line + 1 ) "" ) + 1;
         printf "%" padding "s", ":";
     }
     else
     {
-        FATAL( "Diff line indicator not recognized." "\n" $0 );
+        errmsg = "Unexpected diff line indicator.";
+        errmsg = errmsg "\n" "Indicator: " indicator;
+        errmsg = errmsg "\n" "File: " path;
+        errmsg = errmsg "\n" "File's diff line: " $0;
+        FATAL( errmsg );
     }
 
     print;
