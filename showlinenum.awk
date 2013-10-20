@@ -164,6 +164,7 @@ function FATAL( error_message )
     print "";
     # Apparently there is no portable way to get this script's name at runtime?
     error_message = "FATAL: showlinenum: " error_message;
+    error_message = strip_ansi_color_codes( error_message );
     print error_message > "/dev/stderr";
     exit 1;
 }
