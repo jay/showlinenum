@@ -28,11 +28,28 @@
 #
 # git diff [options] <required> | showlinenum.awk [option=<value>]
 #
+####
+#
+#
+#### Output:
+#
 # The diff line output is in this format:
 # [path:]<line number>:<diff line>
 #
-# If a file has been removed a tilde is substituted for the line number:
-# [path:]~:<diff line>
+# When the path is shown it's the new version's file path. Line numbers are shown for lines in the
+# new version of the file (ie lines that are the same or added). If a line appears only in the old
+# version of the file (ie lines removed) or the warning indicator is found then padding space is
+# used in place of a line number. If a file was removed a tilde ~ is used in place of a line number.
+#
+# The first character in <diff line> is one of three indicators:
+# - : Line removed
+# + : Line added
+# <space> : Line same
+#
+# For example:
+#  :-removed
+# 7:+added
+# 8: common
 #
 # On error a line that starts with ERROR: and is followed by script name and error message(s)
 # --which may be one or more lines-- is sent to standard error output (stderr). The script then
@@ -43,6 +60,7 @@
 # aborts with exit code 1.
 #
 ####
+#
 #
 #### Examples:
 #
@@ -61,7 +79,6 @@
 # Options can be passed to this script by using awk's -v option or the traditional way (shown).
 # git diff --color=always HEAD~1 HEAD | showlinenum.awk show_header=0
 # git diff --color=always HEAD~1 HEAD | showlinenum.awk show_path=1 show_hunk=0
-#
 #
 ####
 #
