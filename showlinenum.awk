@@ -239,7 +239,7 @@ function strip_ansi_color_codes( input )
     }
 
     # check for combined diff line info
-    if( $0 ~ /^(\033\[[0-9;]*m)*@@@ / )
+    if( $0 ~ /^(\033\[[0-9;]*m)*@@@+ / )
     {
         FATAL( "Combined diff format not supported." );
     }
