@@ -41,15 +41,23 @@
 # version of the file (ie lines removed) or the warning indicator is found then padding space is
 # used in place of a line number. If a file was removed a tilde ~ is used in place of a line number.
 #
-# The first character in <diff line> is one of three indicators:
+# The first character in <diff line> is one of four indicators:
 # - : Line removed
 # + : Line added
 # <space> : Line same
+# \ : diff warning about previous line
 #
 # For example:
 #  :-removed
 # 7:+added
 # 8: common
+#  :\ No newline at end of file
+#
+# As far as I know the backslash indicator is only used for the missing newline at EOF warning. When
+# that warning appears it applies to the line immediately above it. In the example above both the
+# old and new version of the compared file are missing the newline at EOF. If the line above a
+# warning is a removed line then the warning applies to the old version of the file, and if the line
+# above a warning is an added line then the warning applies to the new version of the file.
 #
 # On error a line that starts with ERROR: and is followed by script name and error message(s)
 # --which may be one or more lines-- is sent to standard error output (stderr). The script then
@@ -456,9 +464,9 @@ function strip_ansi_color_codes( input )
 
     if( path == "/dev/null" )
     {
-        if( $0 !~ /^(\033\[[0-9;]*m)*-/ )
+        if( $0 !~ /^(\033\[[0-9;]*m)*[\\-]/ )
         {
-            errmsg = "Expected negative indicator for removed file's diff line.";
+            errmsg = "Expected negative or backslash indicator for removed file's diff line.";
             errmsg = errmsg "\n" "Removed file: " oldfile_path;
             errmsg = errmsg "\n" "File's diff line: " $0;
             FATAL( errmsg );
@@ -483,7 +491,7 @@ function strip_ansi_color_codes( input )
     # of the diff line, not the colorization added by git diff). Unfortunately early versions of
     # gawk (like the one included with git for Windows) do not support an array parameter for
     # match() so the indicator must be extracted on success by using substr().
-    if( ( $0 !~ /^(\033\[[0-9;]*m)*[ +-]/ ) || !match( $0, /[ +-]/ ) || ( RLENGTH != 1 ) )
+    if( ( $0 !~ /^(\033\[[0-9;]*m)*[\\ +-]/ ) || !match( $0, /[\\ +-]/ ) || ( RLENGTH != 1 ) )
     {
         errmsg = "Failed to extract indicator from diff line.";
         errmsg = errmsg "\n" "File: " path;
@@ -507,7 +515,7 @@ function strip_ansi_color_codes( input )
         # Using the 'f' type specifier should show [-9007199254740992, 9007199254740992]
         printf "%.0f:", line++;
     }
-    else if( indicator == "-" )
+    else if( ( indicator == "-" ) || ( indicator == "\\" ) )
     {
         if( show_path )
         {
