@@ -1,4 +1,4 @@
-#!/bin/gawk -f
+#!/bin/sh
 #
 # Copyright (C) 2013 Jay Satiro <raysatiro@yahoo.com>
 # All rights reserved.
@@ -146,6 +146,13 @@
 #
 ####
 #
+
+
+{
+# This code block is compatible with both the bourne shell and gawk. If this gawk script is being
+# interpreted by the bourne shell then gawk is executed to become its interpreter.
+LAUNCHER="" "exec" "gawk" "-f" "$0" "$@"
+}
 
 
 function reset_header_variables()
