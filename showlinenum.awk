@@ -119,7 +119,7 @@
 #
 ##
 #
-# @show_binary [0,1] default: ( show_header ? 0 : 1 )
+# @show_binary [0,1] default: ( show_path ? 1 : 0 )
 # Show a binary file that differs in an empty format. [path:][~]:
 #
 # Binary files have no concept of lines, therefore there is no line number or diff line to show
@@ -187,7 +187,7 @@ function init()
     show_header = get_bool( show_header, 1 );
     show_hunk = get_bool( show_hunk, ( show_header ? 1 : 0 ) );
     show_path = get_bool( show_path, ( show_header ? 0 : 1 ) );
-    show_binary = get_bool( show_binary, ( show_header ? 0 : 1 ) );
+    show_binary = get_bool( show_binary, ( show_path ? 1 : 0 ) );
     allow_colons_in_path = get_bool( allow_colons_in_path, 0 );
 }
 
