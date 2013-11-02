@@ -492,14 +492,10 @@ function strip_ansi_color_codes( input )
     }
 
 
-    # I'm using match() to get the location of the indicator character because if I were to use
-    # gensub() I'd have to strip the diff line of ansi color codes either before or after since it
-    # can embed the color codes in a match. I think it would be slower to strip every diff line if
-    # done before, or if done after it could lead to corruption if internally gensub() prepends or
-    # appends escape codes to the indicator that it finds in the diff line itself (ie actually part
-    # of the diff line, not the colorization added by git diff). Unfortunately early versions of
-    # gawk (like the one included with git for Windows) do not support an array parameter for
-    # match() so the indicator must be extracted on success by using substr().
+    # Extract the indicator. Unfortunately early versions of gawk (like the one included with git
+    # for Windows) do not support an array parameter for match() so the indicator must be extracted
+    # on success by using substr().
+
     if( ( $0 !~ /^(\033\[[0-9;]*m)*[\\ +-]/ ) || !match( $0, /[\\ +-]/ ) || ( RLENGTH != 1 ) )
     {
         errmsg = "Failed to extract indicator from diff line.";
