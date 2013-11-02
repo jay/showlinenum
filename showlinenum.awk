@@ -26,7 +26,9 @@
 #
 #### Usage:
 #
-# git diff [options] <required> | showlinenum.awk [option=<value>]
+# git diff [options] | showlinenum.awk [options]
+#
+# All options for showlinenum require a value and are specified using the format option=value.
 #
 ####
 #
