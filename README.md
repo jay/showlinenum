@@ -19,16 +19,16 @@ Combined diff format is not supported.
 Output
 ------
 
-The diff line output is in this format:
+The diff line output is in this format:  
 `[path:]<line number>:<diff line>`
 
 When the path is shown it's the new version's file path. Line numbers are shown for lines in the new version of the file (ie lines that are the same or added). If a line appears only in the old version of the file (ie lines removed) or the warning indicator is found then padding space is used in place of a line number. If a file was removed a tilde ~ is used in place of a line number.
 
-The first character in `<diff line>` is one of four indicators:
-**-** : Line removed
-**+** : Line added
-**&lt;space&gt;** : Line same
-**\** : diff warning about previous line
+The first character in `<diff line>` is one of four indicators:  
+`-` : Line removed  
+`+` : Line added  
+` ` : Line same  
+`\` : diff warning about previous line
 
 For example:
 ```
@@ -47,16 +47,16 @@ On fatal error a line that starts with `FATAL:` and is followed by script name a
 Examples
 --------
 
-Simple example. Line numbers are prepended to git diff's output.
+Simple example. Line numbers are prepended to git diff's output.  
 `git diff --cached | showlinenum.awk`
 
 This script properly handles the ANSI escape color codes output by git diff. To get color output you have to force git diff to send it by passing `--color=always`. When that option is used the color output is always output so it is not recommended unless you are either outputting to the terminal or somewhere that can properly handle the color codes. Many scripts do not function correctly when working with color coded input.
 
-This is the same as the first example, but with color output.
+This is the same as the first example, but with color output.  
 `git diff --color=always --cached | showlinenum.awk`
 
-Options can be passed to this script by using awk's -v option or the traditional way (shown).
-`git diff --color=always HEAD~1 HEAD | showlinenum.awk show_header=0`
+Options can be passed to this script by using awk's -v option or the traditional way (shown).  
+`git diff --color=always HEAD~1 HEAD | showlinenum.awk show_header=0`  
 `git diff --color=always HEAD~1 HEAD | showlinenum.awk show_path=1 show_hunk=0`
 
 Options
@@ -81,7 +81,7 @@ Example: `@@ -0,0 +1,17 @@`
 ### Show paths before line numbers.
 #### `@show_path [0,1] default: ( show_header ? 0 : 1 )`
 
-Example:
+Example:  
 `testdir/file:39:+some added text`
 
 ### Show a binary file that differs in an empty format. `[path:][~]:`
@@ -89,11 +89,11 @@ Example:
 
 Binary files have no concept of lines, therefore there is no line number or diff line to show that a binary file differs. If the headers are shown you can always see whether or not a binary file differs because there will be a message "Binary files &lt;old&gt; and &lt;new&gt; differ". If the headers are not shown however, that message is suppressed and a binary file that differs has an "empty format" with no information, except for a tilde that will be shown if the file was removed.
 
-Here are two examples of the empty format, one where the path is shown and one where it isn't:
-`testdir/binary_file::`
+Here are two examples of the empty format, one where the path is shown and one where it isn't:  
+`testdir/binary_file::`  
 `:`
 
-Here is an example of a removed binary file, path shown:
+Here is an example of a removed binary file, path shown:  
 `calc.exe:~:`
 
 ### Allow colons in path.
