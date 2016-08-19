@@ -215,7 +215,7 @@ function get_bool( input, default_value )
     }
 
     regex = "^[[:blank:]]*([0-1])[[:blank:]]*$";
-    return ( ( input ~ regex ) ? gensub( regex, "\\1", "", input ) : default_value ) + 0;
+    return ( ( input ~ regex ) ? gensub( regex, "\\1", 1, input ) : default_value ) + 0;
 }
 
 # this returns a string with the ansi color codes removed
@@ -270,7 +270,7 @@ function strip_ansi_color_codes( input )
         regex = "^@@ -[0-9]+(,[0-9]+)? \\+([0-9]+)(,[0-9]+)? @@.*$";
         if( stripped ~ regex )
         {
-            line = gensub( regex, "\\2", "", stripped );
+            line = gensub( regex, "\\2", 1, stripped );
             # Adding zero to line converts it from a string to an integer.
             # That only works when all color codes have been removed.
             line = line + 0;
@@ -334,7 +334,7 @@ function strip_ansi_color_codes( input )
         regex = "^\\-\\-\\- (\\042?a\\/.+)$";
         if( stripped ~ regex )
         {
-            oldfile_path = gensub( regex, "\\1", "", stripped );
+            oldfile_path = gensub( regex, "\\1", 1, stripped );
 
             # Exit if there's a colon in the path. This is to keep parsing sane.
             if( !allow_colons_in_path && ( oldfile_path ~ /:/ ) )
@@ -360,7 +360,7 @@ function strip_ansi_color_codes( input )
         regex = "^\\+\\+\\+ (\\042?b\\/.+)$";
         if( stripped ~ regex )
         {
-            path = gensub( regex, "\\1", "", stripped );
+            path = gensub( regex, "\\1", 1, stripped );
 
             # Exit if there's a colon in the path. This is to keep parsing sane.
             if( !allow_colons_in_path && ( path ~ /:/ ) )
@@ -386,7 +386,7 @@ function strip_ansi_color_codes( input )
         regex = "^Binary files (.*) differ$";
         if( stripped ~ regex )
         {
-            path = gensub( regex, "\\1", "", stripped );
+            path = gensub( regex, "\\1", 1, stripped );
 
             found_path = 0;
             found_oldfile_path = 0;
