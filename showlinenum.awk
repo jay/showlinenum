@@ -518,7 +518,7 @@ function strip_ansi_color_codes( input )
         # sure how relevant that is since it seems to vary between different versions of awk and
         # only when the integer is large (how large?).
         # Using the 'f' type specifier should show [-9007199254740992, 9007199254740992]
-        printf "%.0f:", line++;
+        printf "\033[1;33m%.0f:\033[0m", line++;
     }
     else if( ( indicator == "-" ) || ( indicator == "\\" ) )
     {
