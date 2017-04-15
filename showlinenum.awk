@@ -146,6 +146,15 @@
 # guarantee that this script's diff line output can always be parsed with the first colon occurring
 # immediately after the full path, if the path is shown. Even if it's not shown it's still checked.
 #
+##
+#
+# @color_{line_number,path,separator} <num>[;num][;num]
+#
+# Color the respective section using one or more ANSI color codes.
+# This is not recommended unless you are outputting to the terminal.
+# If semi-colons are present in these options your shell may need them quoted.
+# Example: "color_line_number=1;37;45" is bright white foreground (1;37) on purple background (45).
+#
 ####
 #
 
@@ -177,8 +186,18 @@ function init()
     # To determine whether or not a variable was defined on the command line and is not an empty
     # string it must be tested. Many versions of gawk will show a warning if using option --lint and
     # an undefined variable is evaluated. Therefore this workaround to force define some variables
-    # as a string by appending an empty string. The variables are later converted back to a number
-    # by get_bool().
+    # as a string by appending an empty string.
+
+    # String variables.
+    color_line_number = color_line_number "";
+    color_path = color_path "";
+    color_separator = color_separator "";
+
+    die_if_bad_color( color_line_number );
+    die_if_bad_color( color_path );
+    die_if_bad_color( color_separator );
+
+    # Bool variables are later converted back to a number by get_bool().
     show_header = show_header "";
     show_hunk = show_hunk "";
     show_path = show_path "";
@@ -218,13 +237,83 @@ function get_bool( input, default_value )
     return ( ( input ~ regex ) ? gensub( regex, "\\1", 1, input ) : default_value ) + 0;
 }
 
+function die_if_bad_color( input )
+{
+    if( input ~ /[^0-9;]/ )
+    {
+        FATAL( "die_if_bad_color(): color parameters may contain only numbers and semi-colons." );
+    }
+}
+
 # this returns a string with the ansi color codes removed
 function strip_ansi_color_codes( input )
 {
     return gensub( /\033\[[0-9;]*m/, "", "g", input );
 }
 
+function print_separator( a_separator )
+{
+  if( color_separator )
+  {
+      printf "\033[%sm%s\033[m", color_separator, a_separator;
+  }
+  else
+  {
+      printf "%s", a_separator;
+  }
+}
+
+function print_line_number( a_line_number )
+{
+  if( color_line_number )
+  {
+      printf "\033[%sm", color_line_number;
+  }
+
+  if( a_line_number ~ /^[0-9]+$/ )
+  {
+      # Awk stores all integers internally as floating point. If printf is passed an integer it is
+      # allowed convert it to scientific notation which I don't want for line numbers. I'm not sure
+      # how relevant that is since it seems to vary between different versions of awk and only when
+      # the integer is large (how large?).
+      # Using the 'f' type specifier should show [-9007199254740992, 9007199254740992]
+      printf "%.0f", a_line_number + 0;
+  }
+  else
+  {
+      printf "%s", a_line_number;
+  }
+
+  if( color_line_number )
+  {
+      printf "\033[m";
+  }
+
+  print_separator( ":" );
+}
+
+function print_path( a_path )
+{
+  if( !show_path )
+  {
+      return;
+  }
+
+  if( color_path )
+  {
+      printf "\033[%sm%s\033[m", color_path, a_path;
+  }
+  else
+  {
+      printf "%s", a_path;
+  }
+
+  print_separator( ":" );
+}
+
+#
 # main
+#
 {
     if( NR == 1 )
     {
@@ -441,12 +530,20 @@ function strip_ansi_color_codes( input )
 
             if( show_binary )
             {
-                if( show_path )
+                if( found_oldfile_path )
                 {
-                    printf "%s:", ( found_oldfile_path ? oldfile_path : path );
+                    # Binary file removed: path/to/foo:~:
+                    print_path( oldfile_path );
+                    print_line_number( "~" );
+                }
+                else
+                {
+                    # Binary file differs: path/to/foo::
+                    print_path( path );
+                    print_line_number( "" );
                 }
 
-                print ( found_oldfile_path ? "~:" : ":" );
+                print "";
             }
 
             reset_header_variables();
@@ -481,12 +578,10 @@ function strip_ansi_color_codes( input )
             FATAL( errmsg );
         }
 
-        if( show_path )
-        {
-            printf "%s:", oldfile_path;
-        }
+        # File removed: path/to/foo:~:
+        print_path( oldfile_path );
+        print_line_number( "~" );
 
-        printf "~:";
         print;
         next;
     }
@@ -508,27 +603,14 @@ function strip_ansi_color_codes( input )
 
     if( ( indicator == "+" ) || ( indicator == " " ) )
     {
-        if( show_path )
-        {
-            printf "%s:", path;
-        }
-
-        # Awk stores all integers internally as floating point. If print is passed an integer it is
-        # allowed convert it to scientific notation which I don't want for line numbers. I'm not
-        # sure how relevant that is since it seems to vary between different versions of awk and
-        # only when the integer is large (how large?).
-        # Using the 'f' type specifier should show [-9007199254740992, 9007199254740992]
-        printf "%.0f:", line++;
+        print_path( path );
+        print_line_number( line++ );
     }
     else if( ( indicator == "-" ) || ( indicator == "\\" ) )
     {
-        if( show_path )
-        {
-            printf "%s:", path;
-        }
-
-        padding = length( ( line + 1 ) "" ) + 1;
-        printf "%" padding "s", ":";
+        print_path( path );
+        # Fill the line number section with padding.
+        print_line_number( sprintf( "%" length( ( line + 1 ) "" ) "s", " " ) );
     }
     else
     {

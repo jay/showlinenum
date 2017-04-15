@@ -101,6 +101,17 @@ Here is an example of a removed binary file, path shown:
 
 By default this script will abort if it encounters a path that contains a colon. That's done to guarantee that this script's diff line output can always be parsed with the first colon occurring immediately after the full path, if the path is shown. Even if it's not shown it's still checked.
 
+### Add color to some sections.
+#### `@color_{line_number,path,separator} <num>[;num][;num]`
+
+Color the respective section using one or more ANSI color codes.
+This is not recommended unless you are outputting to the terminal.
+If semi-colons are present in these options your shell may need them quoted.
+
+Example: "color_line_number=1;37;45" is bright white foreground (1;37) on purple background (45).
+
+[![color_line_number](color_line_number.gif?raw=true)](color_line_number.gif?raw=true)
+
 
 Other
 -----
