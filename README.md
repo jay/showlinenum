@@ -104,7 +104,7 @@ By default this script will abort if it encounters a path that contains a colon.
 ### Add color to some sections.
 #### `@color_{line_number,path,separator} <num>[;num][;num]`
 
-Color the respective section using one or more ANSI color codes.
+Color the respective section using one or more [ANSI color codes](https://user-images.githubusercontent.com/965580/27257186-e5709826-539a-11e7-9dcb-414fa65a0fbe.png).
 This is not recommended unless you are outputting to the terminal.
 If semi-colons are present in these options your shell may need them quoted.
 
