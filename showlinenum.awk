@@ -245,6 +245,18 @@ function die_if_bad_color( input )
     }
 }
 
+function die_if_colon( input )
+{
+    if( !allow_colons_in_path && ( input ~ /:/ ) )
+    {
+        errmsg = "die_if_colon(): colons in path are forbidden by default in deference to scripts ";
+        errmsg = errmsg "which may parse this script's output and rely on the colon as a ";
+        errmsg = errmsg "separator. To override use command line option allow_colons_in_path=1.";
+        errmsg = errmsg "\n" "Path: " input;
+        FATAL( errmsg );
+    }
+}
+
 # this returns a string with the ansi color codes removed
 function strip_ansi_color_codes( input )
 {
@@ -425,15 +437,7 @@ function print_path( a_path )
         {
             oldfile_path = gensub( regex, "\\1", 1, stripped );
 
-            # Exit if there's a colon in the path. This is to keep parsing sane.
-            if( !allow_colons_in_path && ( oldfile_path ~ /:/ ) )
-            {
-                # Parse timestamps instead? I can't find that git diff outputs them.
-                errmsg = "Colons in path are forbidden.";
-                errmsg = errmsg "\n" "To override use option allow_colons_in_path.";
-                errmsg = errmsg "\n" oldfile_path;
-                FATAL( errmsg );
-            }
+            die_if_colon(oldfile_path);
 
             found_oldfile_path = sub( /a\//, "", oldfile_path );
 
@@ -451,15 +455,7 @@ function print_path( a_path )
         {
             path = gensub( regex, "\\1", 1, stripped );
 
-            # Exit if there's a colon in the path. This is to keep parsing sane.
-            if( !allow_colons_in_path && ( path ~ /:/ ) )
-            {
-                # Parse timestamps instead? I can't find that git diff outputs them.
-                errmsg = "Colons in path are forbidden.";
-                errmsg = errmsg "\n" "To override use option allow_colons_in_path.";
-                errmsg = errmsg "\n" path;
-                FATAL( errmsg );
-            }
+            die_if_colon(path);
 
             found_path = sub( /b\//, "", path );
 
