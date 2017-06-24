@@ -245,16 +245,42 @@ function die_if_bad_color( input )
     }
 }
 
-function die_if_colon( input )
+# Fix an extracted path.
+# eg '+++ b/foo/bar' the input is 'b/foo/bar' and the output is 'foo/bar'
+function fix_extracted_path( input )
 {
+    if( input == "/dev/null" )
+    {
+        return input;
+    }
+
+    if( input !~ /^\042?[ab]\// )
+    {
+        errmsg = "fix_extracted_path(): sanity check failed, expected a/ or b/ prefix";
+        errmsg = errmsg "\n" "Path: " input;
+        FATAL( errmsg );
+    }
+
     if( !allow_colons_in_path && ( input ~ /:/ ) )
     {
-        errmsg = "die_if_colon(): colons in path are forbidden by default in deference to scripts ";
-        errmsg = errmsg "which may parse this script's output and rely on the colon as a ";
+        errmsg = "fix_extracted_path(): colons in path are forbidden by default in deference to ";
+        errmsg = errmsg "scripts which may parse this script's output and rely on the colon as a ";
         errmsg = errmsg "separator. To override use command line option allow_colons_in_path=1.";
         errmsg = errmsg "\n" "Path: " input;
         FATAL( errmsg );
     }
+
+    # Remove an erroneous trailing tab that git diff can add to some paths.
+    # eg an unquoted 'b/a $b	' becomes 'b/a $b' if the diff line only contains the latter.
+    if( input ~ /\t$/ && !index( diff, input ) && \
+        index( diff, substr( input, 1, length( input ) - 1 ) ) )
+    {
+        sub( /\t$/, "", input );
+    }
+
+    sub( /[ab]\//, "", input );
+
+    return input;
 }
 
 # this returns a string with the ansi color codes removed
@@ -405,9 +431,11 @@ function print_path( a_path )
     {
         stripped = strip_ansi_color_codes( $0 );
 
-        if( stripped == "--- /dev/null" )
+        # Check for oldfile path
+        regex = "^\\-\\-\\- (\\042?a\\/.+|\\/dev\\/null)$";
+        if( stripped ~ regex )
         {
-            oldfile_path = "/dev/null";
+            oldfile_path = fix_extracted_path( gensub( regex, "\\1", 1, stripped ) );
             found_oldfile_path = 1;
 
             if( show_header )
@@ -418,46 +446,12 @@ function print_path( a_path )
             next;
         }
 
-        if( stripped == "+++ /dev/null" )
-        {
-            path = "/dev/null";
-            found_path = 1;
-
-            if( show_header )
-            {
-                print;
-            }
-
-            next;
-        }
-
-        # Check for oldfile path
-        regex = "^\\-\\-\\- (\\042?a\\/.+)$";
-        if( stripped ~ regex )
-        {
-            oldfile_path = gensub( regex, "\\1", 1, stripped );
-
-            die_if_colon(oldfile_path);
-
-            found_oldfile_path = sub( /a\//, "", oldfile_path );
-
-            if( show_header )
-            {
-                print;
-            }
-
-            next;
-        }
-
         # Check for newfile path
-        regex = "^\\+\\+\\+ (\\042?b\\/.+)$";
+        regex = "^\\+\\+\\+ (\\042?b\\/.+|\\/dev\\/null)$";
         if( stripped ~ regex )
         {
-            path = gensub( regex, "\\1", 1, stripped );
-
-            die_if_colon(path);
-
-            found_path = sub( /b\//, "", path );
+            path = fix_extracted_path( gensub( regex, "\\1", 1, stripped ) );
+            found_path = 1;
 
             if( show_header )
             {
