@@ -139,16 +139,18 @@
 #
 ##
 #
-# @allow_colons_in_path [0,1] default: 0
+# @allow_colons_in_path [0,1] default: ( show_path ? 0 : 1 )
 # Allow colons in path.
 #
-# By default this script will abort if it encounters a path that contains a colon. That's done to
+# If this option is off then abort if a path that contains a colon is encountered. That's done to
 # guarantee that this script's diff line output can always be parsed with the first colon occurring
-# immediately after the full path, if the path is shown. Even if it's not shown it's still checked.
+# immediately after the full path. Note git diff paths may start with '<commit>:' like
+# HEAD:./foo/bar, and for such a path this option would need to be on.
 #
 ##
 #
 # @color_{line_number,path,separator} <num>[;num][;num]
+# Add color to some sections.
 #
 # Color the respective section using one or more ANSI color codes.
 # This is not recommended unless you are outputting to the terminal.
@@ -209,7 +211,7 @@ function init()
     show_hunk = get_bool( show_hunk, ( show_header ? 1 : 0 ) );
     show_path = get_bool( show_path, ( show_header ? 0 : 1 ) );
     show_binary = get_bool( show_binary, ( show_path ? 1 : 0 ) );
-    allow_colons_in_path = get_bool( allow_colons_in_path, 0 );
+    allow_colons_in_path = get_bool( allow_colons_in_path, ( show_path ? 0 : 1 ) );
 }
 
 function FATAL( error_message )
@@ -263,9 +265,17 @@ function fix_extracted_path( input )
 
     if( !allow_colons_in_path && ( input ~ /:/ ) )
     {
-        errmsg = "fix_extracted_path(): colons in path are forbidden by default in deference to ";
-        errmsg = errmsg "scripts which may parse this script's output and rely on the colon as a ";
-        errmsg = errmsg "separator. To override use command line option allow_colons_in_path=1.";
+        errmsg = "fix_extracted_path(): colons in path are forbidden ";
+        if(show_path)
+        {
+            errmsg = errmsg "by default when show_path is on in deference to scripts which may ";
+            errmsg = errmsg "parse this script's output and rely on the colon as a separator. To ";
+            errmsg = errmsg "override use command line option allow_colons_in_path=1.";
+        }
+        else
+        {
+            errmsg = errmsg "because allow_colons_in_path is off.";
+        }
         errmsg = errmsg "\n" "Path: " input;
         FATAL( errmsg );
     }

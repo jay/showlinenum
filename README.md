@@ -97,9 +97,9 @@ Here is an example of a removed binary file, path shown:
 `calc.exe:~:`
 
 ### Allow colons in path.
-#### `@allow_colons_in_path [0,1] default: 0`
+#### `@allow_colons_in_path [0,1] default: ( show_path ? 0 : 1 )`
 
-By default this script will abort if it encounters a path that contains a colon. That's done to guarantee that this script's diff line output can always be parsed with the first colon occurring immediately after the full path, if the path is shown. Even if it's not shown it's still checked.
+If this option is off then abort if a path that contains a colon is encountered. That's done to guarantee that this script's diff line output can always be parsed with the first colon occurring immediately after the full path. Note git diff paths may start with '<commit>:' like HEAD:./foo/bar, and for such a path this option would need to be on.
 
 ### Add color to some sections.
 #### `@color_{line_number,path,separator} <num>[;num][;num]`
