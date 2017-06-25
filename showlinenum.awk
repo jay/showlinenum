@@ -270,7 +270,7 @@ function fix_extracted_path( input )
         FATAL( errmsg );
     }
 
-    # Remove an erroneous trailing tab that git diff can add to some paths.
+    # Remove an erroneous trailing tab that git diff can add to some non-binary paths.
     # eg an unquoted 'b/a $b	' becomes 'b/a $b' if the diff line only contains the latter.
     if( input ~ /\t$/ && !index( diff, input ) && \
         index( diff, substr( input, 1, length( input ) - 1 ) ) )
@@ -478,7 +478,7 @@ function print_path( a_path )
 
                 if( oldfile_path ~ /^\042?a\// && index( diff, oldfile_path ) )
                 {
-                    sub( /a\//, "", oldfile_path );
+                    oldfile_path = fix_extracted_path( oldfile_path );
                     found_oldfile_path = 1;
                     path = "/dev/null";
                     found_path = 1;
@@ -498,11 +498,11 @@ function print_path( a_path )
                 {
                     continue;
                 }
-                path2 = substr( diff, diff_rstart, path_len );
 
-                if( path == path2 )
+                if( path == substr( diff, diff_rstart, path_len ) )
                 {
-                    found_path = sub( /b\//, "", path );
+                    path = fix_extracted_path( path );
+                    found_path = 1;
                     break;
                 }
             }
