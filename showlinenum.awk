@@ -476,8 +476,9 @@ function print_path( a_path )
             {
                 oldfile_path = substr( path, 1, length( path ) - RLENGTH );
 
-                if( index( diff, oldfile_path ) && sub( /a\//, "", oldfile_path ) )
+                if( oldfile_path ~ /^\042?a\// && index( diff, oldfile_path ) )
                 {
+                    sub( /a\//, "", oldfile_path );
                     found_oldfile_path = 1;
                     path = "/dev/null";
                     found_path = 1;
