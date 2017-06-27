@@ -52,14 +52,10 @@ line then the warning applies to the old version of the file, and if the line
 above a warning is an added line then the warning applies to the new version of
 the file.
 
-On error a line that starts with `ERROR:` and is followed by script name and
-error message(s) --which may be one or more lines-- is sent to standard error
-output (stderr). The script then continues to the next line.
-***This is unimplemented for now. All errors are treated as fatal errors.***
-
-On fatal error a line that starts with `FATAL:` and is followed by script name
-and error message(s) --which may be one or more lines-- is sent to standard
-error output (stderr). The script then aborts with exit code 1.
+All errors are sent to standard error output (stderr). Currently all errors are
+treated as fatal errors. On fatal error a line that starts with `FATAL:` is
+followed by script name and error message(s), which may be one or more lines.
+This script then aborts with exit code 1.
 
 Examples
 --------
