@@ -274,9 +274,9 @@ function fix_extracted_path(input)
     return input;
   }
 
-  if(input !~ /^\042?[ab]\//)
+  if(input !~ /^\042?[abiwco]\//)
   {
-    errmsg = "fix_extracted_path(): sanity check failed, expected a/ or b/ " \
+    errmsg = "fix_extracted_path(): sanity check failed, expected [abiwco]/ " \
              "prefix." \
              "\n" "Path: " input;
     FATAL(errmsg);
@@ -301,15 +301,15 @@ function fix_extracted_path(input)
   }
 
   # Remove an erroneous trailing tab that git diff can add to some non-binary
-  # paths. eg an unquoted 'b/a $b	' becomes 'b/a $b' if the diff line only
-  # contains the latter.
+  # paths. eg an unquoted 'b/a $b	' becomes 'b/a $b' if the diff line
+  # only contains the latter.
   if((input ~ /\t$/) && !index(diff, input) && \
      index(diff, substr(input, 1, length(input) - 1)))
   {
     sub(/\t$/, "", input);
   }
 
-  sub(/[ab]\//, "", input);
+  sub(/[abiwco]\//, "", input);
 
   return input;
 }
@@ -464,7 +464,7 @@ function print_path(a_path)
     stripped = strip_ansi_color_codes($0);
 
     # Check for oldfile path
-    regex = "^\\-\\-\\- (\\042?a\\/.+|\\/dev\\/null)$";
+    regex = "^\\-\\-\\- (\\042?[aiwco]\\/.+|\\/dev\\/null)$";
     if(stripped ~ regex)
     {
       oldfile_path = fix_extracted_path(gensub(regex, "\\1", 1, stripped));
@@ -479,7 +479,7 @@ function print_path(a_path)
     }
 
     # Check for newfile path
-    regex = "^\\+\\+\\+ (\\042?b\\/.+|\\/dev\\/null)$";
+    regex = "^\\+\\+\\+ (\\042?[biwco]\\/.+|\\/dev\\/null)$";
     if(stripped ~ regex)
     {
       path = fix_extracted_path(gensub(regex, "\\1", 1, stripped));
@@ -509,7 +509,7 @@ function print_path(a_path)
       {
         oldfile_path = substr(path, 1, length(path) - RLENGTH);
 
-        if((oldfile_path ~ /^\042?a\//) && index(diff, oldfile_path))
+        if((oldfile_path ~ /^\042?[aiwco]\//) && index(diff, oldfile_path))
         {
           oldfile_path = fix_extracted_path(oldfile_path);
           found_oldfile_path = 1;
@@ -521,7 +521,7 @@ function print_path(a_path)
       # This gets the path for a binary file by digging through the first line
       # of the diff header ('diff') and the binary file notice line
       # ('stripped') to find the longest rightmost match between the two.
-      while(!found_path && match(path, /and \042?b\/.+$/))
+      while(!found_path && match(path, /and \042?[biwco]\/.+$/))
       {
         path_len = RLENGTH - 4;
         path = substr(path, RSTART + 4, path_len);
