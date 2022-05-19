@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 # Copyright (C) 2013 Jay Satiro <raysatiro@yahoo.com>
-# All rights reserved.
 #
 # This file is part of the showlinenum project.
 # https://github.com/jay/showlinenum/
